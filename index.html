@@ -247,6 +247,33 @@ footer small{display:block;position:relative;z-index:3;margin-top:70px;font-size
 .logo-hope{flex:none;height:34px;padding:0 9px;border-radius:999px;background:var(--cream);display:grid;place-items:center}
 .logo-hope img{height:20px;width:auto;display:block}
 .credits .contact small{display:inline;margin:0;font-weight:500;font-size:12px;opacity:.9;color:var(--cream)}
+
+/* ───── Modificar reservas ───── */
+.btn-edit{padding:9px 15px;border-radius:999px;border:1.5px solid var(--brown-d);background:var(--cream);color:var(--brown-d);font-weight:700;font-size:13px;cursor:pointer;white-space:nowrap}
+.btn-edit:hover{background:var(--brown-d);color:var(--cream)}
+.slots li.mine{background:#fff;border:1.5px solid #d9bba6}
+.slots li.mine em{font-style:normal;font-weight:500;color:var(--brown-s);font-size:12px}
+.slot-btn{margin-left:auto;border:0;background:var(--paper-2);width:32px;height:32px;border-radius:50%;cursor:pointer;font-size:14px;flex:none}
+.slot-btn:hover{background:var(--line)}
+.code-box{margin:6px 0 4px;padding:14px;border-radius:18px;border:1.5px dashed var(--brown-s);background:var(--paper)}
+.code-box small{display:block;font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:var(--brown-s);font-weight:700}
+.code-box b{display:block;font-family:'Gloock',serif;font-weight:400;font-size:34px;letter-spacing:.18em;color:var(--brown-d);margin:4px 0}
+.code-box span{font-size:12.5px;color:var(--brown-s);line-height:1.45}
+.code-inp{text-transform:uppercase;letter-spacing:.3em;font-weight:700;text-align:center;font-size:20px}
+.inline{display:flex;gap:8px}
+.inline .inp{flex:1}
+.mini{flex:none;border:0;background:var(--brown-d);color:var(--cream);font-weight:700;font-size:12.5px;padding:9px 14px;border-radius:999px;cursor:pointer;min-width:44px;display:inline-flex;align-items:center;justify-content:center}
+.mini.ghost{background:var(--cream);color:var(--brown-d);border:1.5px solid var(--line)}
+.mini.warn{background:#b0574a;color:#fff;border-color:#b0574a}
+.mini:disabled{opacity:.6}
+.mine-list li{flex-wrap:wrap}
+.mine-list li > span:first-child{flex:1;min-width:160px}
+.acts{display:flex;gap:6px;margin-left:auto}
+.sel-list li .acts .mini{font-size:12.5px;line-height:1;margin:0;padding:9px 14px;color:var(--brown-d)}
+.sel-list li .acts .mini.warn{color:#fff}
+.sel-list li svg{flex:none}
+.spin.dark{display:inline-block;vertical-align:middle;width:15px;height:15px;border-color:rgba(94,74,62,.25);border-top-color:var(--brown-d)}
+.sheet.busy .close{opacity:.3;pointer-events:none}
 </style>
 </head>
 <body>
@@ -384,6 +411,7 @@ footer small{display:block;position:relative;z-index:3;margin-top:70px;font-size
       <div class="row">
         <label class="search"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg><input id="q" type="search" placeholder="Buscar: pijamas, cobijas, pañales…" autocomplete="off"></label>
         <label class="toggle"><input type="checkbox" id="onlyFree"> Solo disponibles</label>
+        <button class="btn-edit" id="mis-btn" type="button">✏️ Modificar mi reserva</button>
       </div>
       <div class="chips" id="chips"></div>
       <div class="progress"><span id="prog-t">Cargando…</span><div class="bar"><i id="prog"></i></div></div>
@@ -465,6 +493,18 @@ const store = {
   get(k){ try { return localStorage.getItem(k) || ''; } catch(e){ return ''; } },
   set(k,v){ try { localStorage.setItem(k,v); } catch(e){} }
 };
+/* Mis reservas en este celular: { clave, items:[{id,cupo}] } */
+const Mis = {
+  get(){ try { return JSON.parse(store.get('bs_mis') || '{}'); } catch(e){ return {}; } },
+  set(o){ store.set('bs_mis', JSON.stringify(o)); },
+  clave(){ return this.get().clave || ''; },
+  es(id, cupo){ return (this.get().items || []).some(x => x.id === id && Number(x.cupo) === Number(cupo)); },
+  agregar(clave, nuevos){ const o = this.get(); if (o.clave !== clave) o.items = []; o.clave = clave; o.items = [...(o.items||[]), ...nuevos.map(r => ({ id:r.id, cupo:Number(r.cupo) }))]; this.set(o); },
+  quitar(id, cupo){ const o = this.get(); o.items = (o.items||[]).filter(x => !(x.id === id && Number(x.cupo) === Number(cupo))); this.set(o); },
+  reemplazar(clave, items){ this.set({ clave, items: items.map(r => ({ id:r.id, cupo:Number(r.cupo) })) }); }
+};
+let guardando = false;
+const nuevoReqId = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 10);
 
 /* ═════════ API ═════════ */
 async function apiList(){
@@ -500,7 +540,9 @@ function renderProgress(){
   $('#prog').style.width = total ? (tomados/total*100)+'%' : '0';
 }
 
-function slotHTML(c, i, previewMe){
+function slotHTML(c, i, previewMe, gid){
+  if (c.nombre && Mis.es(gid, c.cupo)) return `<li class="taken mine"><svg style="color:#c9a28c"><use href="#heart"/></svg><span>${esc(c.nombre)} <em>(tú)</em></span>
+    <button class="slot-btn" data-edit="1" aria-label="Modificar">✏️</button></li>`;
   if (c.nombre) return `<li class="taken"><svg><use href="#lock"/></svg><span>${esc(c.nombre)}</span></li>`;
   if (previewMe) return `<li class="me"><svg style="color:#c9a28c"><use href="#heart"/></svg><span>${esc(store.get('bs_nombre') || 'Tu nombre aquí')} ✨</span></li>`;
   return `<li class="free"><span class="n">${i+1}</span>Disponible</li>`;
@@ -513,7 +555,7 @@ function giftHTML(g){
   const slots = g.cupos.map((c,i) => {
     const me = sel && !c.nombre && firstFree;
     if (!c.nombre) firstFree = false;
-    return slotHTML(c,i,me);
+    return slotHTML(c,i,me,g.id);
   }).join('');
   const action = free
     ? `<button class="pick" data-id="${esc(g.id)}">${sel ? '✓ Elegido' : 'Elegir este regalo'}</button>`
@@ -563,6 +605,7 @@ document.addEventListener('visibilitychange', () => { if (!document.hidden) carg
 
 /* ═════════ Eventos ═════════ */
 $('#list').addEventListener('click', e => {
+  if (e.target.closest('[data-edit]')) { abrirMisRegalos(); return; }
   const b = e.target.closest('.pick'); if (!b) return;
   const id = b.dataset.id;
   elegidos.has(id) ? elegidos.delete(id) : elegidos.add(id);
@@ -574,7 +617,8 @@ $('#chips').addEventListener('click', e => {
 });
 $('#q').addEventListener('input', e => { filtro.q = e.target.value; renderList(); });
 $('#onlyFree').addEventListener('change', e => { filtro.soloLibres = e.target.checked; renderList(); });
-$('#cart-go').addEventListener('click', abrirModal);
+$('#cart-go').addEventListener('click', () => { if (!guardando) abrirModal(); });
+$('#mis-btn').addEventListener('click', () => abrirMisRegalos());
 $('#modal').addEventListener('click', e => { if (e.target.id === 'modal') cerrarModal(); });
 document.addEventListener('keydown', e => { if (e.key === 'Escape') cerrarModal(); });
 
@@ -602,25 +646,31 @@ function abrirModal(){
   $('#modal').classList.add('open');
   setTimeout(() => { const n = $('#m-name'); if (n && !n.value) n.focus(); }, 300);
 }
-function cerrarModal(){ $('#modal').classList.remove('open'); }
+function cerrarModal(){ if (guardando) return; $('#modal').classList.remove('open'); }
 
 async function confirmar(){
   const nombre = $('#m-name').value.trim(), mensaje = $('#m-msg').value.trim();
   const err = $('#m-err'), btn = $('#m-go');
   if (nombre.length < 2){ err.textContent = 'Escribe tu nombre, por favor ☁️'; err.hidden = false; $('#m-name').focus(); return; }
   err.hidden = true; btn.disabled = true; btn.innerHTML = '<span class="spin"></span> Guardando…';
+  guardando = true; $('#sheet').classList.add('busy');
+  if (!confirmar.reqId) confirmar.reqId = nuevoReqId();
   try{
-    const d = await apiPost({ action:'reserve', nombre, mensaje, ids:[...elegidos] });
+    const d = await apiPost({ action:'reserve', nombre, mensaje, ids:[...elegidos], clave: Mis.clave(), reqId: confirmar.reqId });
+    confirmar.reqId = null;
     store.set('bs_nombre', nombre);
+    if (d.reservados.length) Mis.agregar(d.clave, d.reservados);
     elegidos.clear(); regalos = d.regalos; renderAll();
-    const ok = d.reservados, ko = d.agotados;
+    const ok = d.reservados, ko = [...d.agotados, ...(d.repetidos||[]).map(r => ({ ...r, regalo: r.regalo + ' (ya lo tenías)' }))];
     $('#sheet').innerHTML = `
       <button class="close" aria-label="Cerrar" onclick="cerrarModal()">✕</button>
       <div class="thanks">
         <div class="big">${ok.length ? '☁️' : '🥺'}</div>
         <h3>${ok.length ? '¡Gracias, ' + esc(nombre) + '!' : 'Uy, se nos adelantaron'}</h3>
         ${ok.length ? `<p class="sub">Tu regalo quedó reservado para Joaquín 🤍</p>
-          <ul class="sel-list">${ok.map(r=>`<li><svg width="16" height="16"><use href="#lock"/></svg> ${esc(r.regalo)}</li>`).join('')}</ul>` : ''}
+          <ul class="sel-list">${ok.map(r=>`<li><svg width="16" height="16"><use href="#lock"/></svg> ${esc(r.regalo)}</li>`).join('')}</ul>
+          <div class="code-box"><small>Tu código para modificar</small><b>${esc(d.clave)}</b>
+          <span>Quedó guardado en este celular. Anótalo (o tómale captura) por si quieres cambiar tu regalo desde otro dispositivo.</span></div>` : ''}
         ${ko.length ? `<p class="sub" style="margin-top:10px">Estos ya no tenían cupo disponible:</p>
           <ul class="sel-list">${ko.map(r=>`<li>✕ ${esc(r.regalo || r.id)}</li>`).join('')}</ul>
           <p class="sub">Puedes elegir otro de la lista 💛</p>` : ''}
@@ -630,8 +680,102 @@ async function confirmar(){
   }catch(e){
     btn.disabled = false; btn.innerHTML = 'Confirmar mi regalo 🤍';
     err.textContent = 'No se pudo guardar: ' + e.message + '. Intenta de nuevo.'; err.hidden = false;
+  }finally{
+    guardando = false; $('#sheet').classList.remove('busy');
   }
 }
+
+/* ═════════ Modificar mis reservas ═════════ */
+async function abrirMisRegalos(claveManual){
+  const clave = (claveManual || Mis.clave() || '').toUpperCase();
+  $('#modal').classList.add('open');
+  if (!clave){ pedirCodigo(); return; }
+  $('#sheet').innerHTML = `<button class="close" aria-label="Cerrar" onclick="cerrarModal()">✕</button>
+    <h3>Mis regalos</h3><p class="sub"><span class="spin dark"></span> Buscando tus reservas…</p>`;
+  try{
+    const d = await apiPost({ action:'mine', clave });
+    Mis.reemplazar(d.clave, d.items); renderList();
+    pintarMisRegalos(d);
+  }catch(e){
+    pedirCodigo(e.message);
+  }
+}
+
+function pedirCodigo(msg){
+  $('#sheet').innerHTML = `
+    <button class="close" aria-label="Cerrar" onclick="cerrarModal()">✕</button>
+    <h3>Modificar mi reserva</h3>
+    <p class="sub">Escribe el código de 6 letras/números que te dimos al reservar.</p>
+    <label class="f" for="m-code">Tu código</label>
+    <input class="inp code-inp" id="m-code" maxlength="6" autocomplete="off" autocapitalize="characters" placeholder="Ej: K7P2QX">
+    <button class="main-btn" id="m-code-go">Buscar mis regalos</button>
+    <p class="msg-err" id="m-err" ${msg ? '' : 'hidden'}>${esc(msg || '')}</p>
+    <div class="note">¿No tienes el código o reservaste antes de esta opción? Escríbenos por WhatsApp al <b>313 443 4880</b> y lo corregimos 🤍</div>`;
+  const go = () => { const v = $('#m-code').value.trim().toUpperCase(); if (v.length === 6) abrirMisRegalos(v); else { $('#m-err').textContent = 'El código tiene 6 caracteres.'; $('#m-err').hidden = false; } };
+  $('#m-code-go').onclick = go;
+  $('#m-code').onkeydown = e => { if (e.key === 'Enter') go(); };
+  setTimeout(() => $('#m-code') && $('#m-code').focus(), 250);
+}
+
+function pintarMisRegalos(d){
+  const nombre = d.items[0] ? d.items[0].nombre : '';
+  $('#sheet').innerHTML = `
+    <button class="close" aria-label="Cerrar" onclick="cerrarModal()">✕</button>
+    <h3>Mis regalos</h3>
+    <p class="sub">Código <b>${esc(d.clave)}</b></p>
+    <label class="f" for="m-rename">Nombre que aparece en la lista</label>
+    <div class="inline">
+      <input class="inp" id="m-rename" maxlength="60" value="${esc(nombre)}">
+      <button class="mini" id="m-rename-go">Guardar</button>
+    </div>
+    <ul class="sel-list mine-list">${d.items.map(r => `
+      <li><span>${esc(r.regalo)}</span>
+        <span class="acts">
+          <button class="mini ghost" data-swap="${esc(r.id)}" data-cupo="${r.cupo}">Cambiar</button>
+          <button class="mini ghost" data-del="${esc(r.id)}" data-cupo="${r.cupo}">Eliminar</button>
+        </span></li>`).join('')}</ul>
+    <div class="note">“Cambiar” libera ese regalo y te lleva a la lista para que elijas otro. “Eliminar” solo lo libera.</div>
+    <p class="msg-err" id="m-err" hidden></p>
+    <button class="main-btn" onclick="cerrarModal()">Listo</button>`;
+
+  $('#m-rename-go').onclick = async () => {
+    const b = $('#m-rename-go'), nuevo = $('#m-rename').value.trim();
+    if (nuevo.length < 2) return mostrarErr('Escribe tu nombre, por favor ☁️');
+    b.disabled = true; b.innerHTML = '<span class="spin"></span>';
+    try{
+      const r = await apiPost({ action:'rename', clave:d.clave, nombre:nuevo });
+      store.set('bs_nombre', nuevo); regalos = r.regalos; renderAll();
+      b.textContent = '✓ Guardado'; toast('Nombre actualizado 🤍');
+    }catch(e){ b.textContent = 'Guardar'; mostrarErr(e.message); }
+    finally{ b.disabled = false; }
+  };
+
+  $('#sheet').querySelectorAll('[data-del],[data-swap]').forEach(b => b.onclick = async () => {
+    const swap = !!b.dataset.swap, id = b.dataset.swap || b.dataset.del, cupo = Number(b.dataset.cupo);
+    if (!swap && b.dataset.sure !== '1'){ b.dataset.sure = '1'; b.textContent = '¿Seguro?'; b.classList.add('warn'); return; }
+    $('#sheet').querySelectorAll('.acts button').forEach(x => x.disabled = true);
+    b.innerHTML = '<span class="spin dark"></span>';
+    try{
+      const r = await apiPost({ action:'cancel', clave:d.clave, id, cupo });
+      Mis.quitar(id, cupo); regalos = r.regalos; renderAll();
+      if (swap){
+        cerrarModal();
+        filtro.q = ''; $('#q').value = ''; filtro.cat = 'Todos'; renderChips(); renderList();
+        toast('Listo, ya lo liberamos. Ahora elige tu nuevo regalo ✨');
+        document.getElementById('regalos').scrollIntoView({ behavior:'smooth' });
+      } else {
+        d.items = d.items.filter(x => !(x.id === id && Number(x.cupo) === cupo));
+        toast('Regalo liberado 🤍');
+        d.items.length ? pintarMisRegalos(d) : cerrarModal();
+      }
+    }catch(e){
+      mostrarErr(e.message);
+      $('#sheet').querySelectorAll('.acts button').forEach(x => x.disabled = false);
+      b.textContent = swap ? 'Cambiar' : 'Eliminar';
+    }
+  });
+}
+function mostrarErr(t){ const e = $('#m-err'); if (e){ e.textContent = t; e.hidden = false; } }
 
 /* ═════════ Asistencia ═════════ */
 const rf = $('#rsvpForm');
