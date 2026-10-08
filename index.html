@@ -233,6 +233,20 @@ footer small{display:block;position:relative;z-index:3;margin-top:70px;font-size
 .credits{position:relative;z-index:3;margin-top:70px;font-size:13px;color:var(--brown-d);line-height:1.7}
 .credits b{font-weight:700}
 .credits a{display:inline-flex;text-align:left;line-height:1.35;align-items:center;gap:7px;margin-top:6px;padding:9px 16px;border-radius:999px;background:var(--brown-d);color:var(--cream);text-decoration:none;font-weight:600;font-size:13px}
+
+/* ───── Música ───── */
+.music{position:fixed;top:14px;right:14px;z-index:70;width:50px;height:50px;border-radius:50%;border:0;cursor:pointer;
+  background:var(--brown-d);color:var(--cream);font-size:22px;display:grid;place-items:center;box-shadow:0 10px 22px -8px rgba(60,40,30,.6)}
+.music.playing{animation:pulse 2.4s ease-in-out infinite}
+.music.off::after{content:"";position:absolute;width:30px;height:2.5px;background:var(--cream);transform:rotate(-45deg);border-radius:2px}
+@keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(94,74,62,.45)}50%{box-shadow:0 0 0 10px rgba(94,74,62,0)}}
+.music-hint{position:fixed;top:24px;right:72px;z-index:70;background:var(--cream);color:var(--brown-d);font-size:12.5px;font-weight:600;
+  padding:7px 13px;border-radius:999px;box-shadow:var(--shadow);border:1.5px solid var(--line);animation:fade .4s;pointer-events:none}
+
+.credits .contact{padding:7px 18px 7px 7px;gap:10px}
+.logo-hope{flex:none;height:34px;padding:0 9px;border-radius:999px;background:var(--cream);display:grid;place-items:center}
+.logo-hope img{height:20px;width:auto;display:block}
+.credits .contact small{display:inline;margin:0;font-weight:500;font-size:12px;opacity:.9;color:var(--cream)}
 </style>
 </head>
 <body>
@@ -409,9 +423,9 @@ footer small{display:block;position:relative;z-index:3;margin-top:70px;font-size
   <div class="cloudbank" aria-hidden="true"><svg viewBox="0 0 600 170" preserveAspectRatio="none"><use href="#bankshape"/></svg></div>
   <div class="credits">
     <p>Desarrollado por <b>Hope</b> · Julieth Rivera 2026</p>
-    <a href="https://wa.me/573134434880?text=Hola%2C%20quiero%20conocer%20el%20portafolio%20de%20Hope" target="_blank" rel="noopener">
-      <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2Zm0 18.2a8.2 8.2 0 0 1-4.2-1.2l-.3-.2-3 .8.8-2.9-.2-.3A8.2 8.2 0 1 1 12 20.2Zm4.5-6.1c-.2-.1-1.5-.7-1.7-.8s-.4-.1-.6.1-.7.8-.8 1-.3.2-.5.1a6.7 6.7 0 0 1-3.3-2.9c-.3-.4.3-.4.7-1.3.1-.2 0-.3 0-.4l-.8-1.8c-.2-.5-.4-.4-.6-.4h-.5a1 1 0 0 0-.7.3 3 3 0 0 0-.9 2.2 5.2 5.2 0 0 0 1.1 2.8 11.9 11.9 0 0 0 4.6 4c1.7.7 2.3.8 3.2.6a2.7 2.7 0 0 0 1.8-1.3 2.2 2.2 0 0 0 .2-1.3c-.1-.1-.2-.2-.5-.3Z"/></svg>
-      Conoce nuestro portafolio<br>WhatsApp 313 443 4880
+    <a class="contact" href="https://wa.me/573134434880?text=Hola%2C%20quiero%20conocer%20el%20portafolio%20de%20Hope" target="_blank" rel="noopener">
+      <span class="logo-hope"><img src="data:image/png;base64,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" alt="Hope"></span>
+      <span>Conoce nuestro portafolio<br><small>WhatsApp 313 443 4880</small></span>
     </a>
   </div>
 </footer>
@@ -426,6 +440,9 @@ footer small{display:block;position:relative;z-index:3;margin-top:70px;font-size
 <div class="modal" id="modal" role="dialog" aria-modal="true" aria-labelledby="m-title">
   <div class="sheet" id="sheet"></div>
 </div>
+<button class="music off" id="music" aria-label="Activar música">🎵</button>
+<div class="music-hint" id="music-hint">Toca la pantalla para escuchar 🎶</div>
+<audio id="song" src="musica.mp3" loop preload="auto"></audio>
 <div class="toast" id="toast"></div>
 
 <script>
@@ -698,6 +715,95 @@ function mostrarVista(scroll){
 }
 window.addEventListener('hashchange', () => mostrarVista(true));
 mostrarVista(false);
+
+/* ═════════ Música de bebé ═════════
+   Si subes un archivo "musica.mp3" junto a index.html, suena ese.
+   Si no existe, suena una cajita musical con la Canción de cuna de Brahms (dominio público). */
+const Musica = (() => {
+  const btn = $('#music'), hint = $('#music-hint'), song = $('#song');
+  let usarMp3 = true, ctx = null, master = null, timer = null, sonando = false;
+  const silenciado = store.get('bs_musica') === 'off';
+  song.volume = .55;
+  song.addEventListener('error', () => { usarMp3 = false; });
+
+  const F = {C4:261.63,D4:293.66,E4:329.63,F4:349.23,G4:392,A4:440,B4:493.88,C5:523.25};
+  const MELODIA = [
+    ['E4',.5],['E4',.5],['G4',2],['E4',.5],['E4',.5],['G4',2],['E4',.5],['G4',.5],['C5',1],['B4',1.5],['A4',.5],['A4',1],['G4',2],
+    ['D4',.5],['E4',.5],['F4',1],['D4',1],['D4',.5],['E4',.5],['F4',2],['D4',.5],['F4',.5],['B4',.5],['A4',.5],['G4',1],['B4',1],['C5',2],
+    ['C4',.5],['C4',.5],['C5',2],['A4',.5],['F4',.5],['G4',2],['E4',.5],['C4',.5],['F4',1],['G4',1],['A4',1],['G4',2],
+    ['C4',.5],['C4',.5],['C5',2],['A4',.5],['F4',.5],['G4',2],['E4',.5],['C4',.5],['F4',1],['E4',.5],['D4',.5],['C4',3]
+  ];
+  const BEAT = .42;
+
+  function nota(freq, t, dur){
+    [[1,'sine',.32],[2,'sine',.08],[3,'triangle',.03]].forEach(([m,type,vol]) => {
+      const o = ctx.createOscillator(), g = ctx.createGain();
+      o.type = type; o.frequency.value = freq*m;
+      g.gain.setValueAtTime(0, t);
+      g.gain.linearRampToValueAtTime(vol, t+.01);
+      g.gain.exponentialRampToValueAtTime(.0001, t + Math.max(1.2, dur+.6));
+      o.connect(g).connect(master); o.start(t); o.stop(t + Math.max(1.3, dur+.7));
+    });
+  }
+  function iniciarAudio(){
+    ctx = new (window.AudioContext || window.webkitAudioContext)();
+    master = ctx.createGain(); master.gain.value = .5;
+    const eco = ctx.createDelay(); eco.delayTime.value = .28;
+    const fb = ctx.createGain(); fb.gain.value = .25;
+    master.connect(ctx.destination); master.connect(eco); eco.connect(fb).connect(eco); fb.connect(ctx.destination);
+  }
+  function cajita(){
+    clearTimeout(timer);
+    let t = ctx.currentTime + .1;
+    MELODIA.forEach(([n,b]) => { nota(F[n], t, b*BEAT); t += b*BEAT; });
+    const total = MELODIA.reduce((a,[,b]) => a+b, 0) * BEAT;
+    timer = setTimeout(() => { if (sonando) cajita(); }, (total + 1.2) * 1000);
+  }
+
+  async function play(){
+    if (sonando) return true;
+    try {
+      if (usarMp3){ await song.play(); }
+      else {
+        if (!ctx) iniciarAudio();
+        await Promise.race([ctx.resume(), new Promise(r => setTimeout(r, 350))]);
+        if (ctx.state !== 'running') throw new Error('bloqueado');
+        cajita();
+      }
+      sonando = true; actualizar(); return true;
+    } catch(e){
+      if (usarMp3 && song.error){ usarMp3 = false; return play(); }
+      return false;
+    }
+  }
+  function pause(){
+    sonando = false; song.pause(); clearTimeout(timer);
+    if (ctx){ ctx.close(); ctx = null; }
+    actualizar();
+  }
+  function actualizar(){
+    btn.classList.toggle('playing', sonando); btn.classList.toggle('off', !sonando);
+    btn.setAttribute('aria-label', sonando ? 'Silenciar música' : 'Activar música');
+    if (sonando) hint.hidden = true;
+  }
+
+  btn.addEventListener('click', e => {
+    e.stopPropagation();
+    if (sonando){ pause(); store.set('bs_musica','off'); } else { store.set('bs_musica','on'); play(); }
+  });
+
+  if (silenciado){ hint.hidden = true; }
+  else {
+    // 1) intenta sonar apenas carga  2) si el navegador lo bloquea, suena con el primer toque
+    setTimeout(() => play().then(ok => {
+      if (ok) return;
+      const primerToque = () => { play(); ['pointerdown','touchstart','keydown'].forEach(ev => document.removeEventListener(ev, primerToque, true)); };
+      ['pointerdown','touchstart','keydown'].forEach(ev => document.addEventListener(ev, primerToque, { capture:true, passive:true }));
+    }), 400);
+    setTimeout(() => { hint.hidden = true; }, 9000);
+  }
+  return { play, pause };
+})();
 
 cargar();
 </script>
