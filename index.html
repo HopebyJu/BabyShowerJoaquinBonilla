@@ -274,6 +274,19 @@ footer small{display:block;position:relative;z-index:3;margin-top:70px;font-size
 .sel-list li svg{flex:none}
 .spin.dark{display:inline-block;vertical-align:middle;width:15px;height:15px;border-color:rgba(94,74,62,.25);border-top-color:var(--brown-d)}
 .sheet.busy .close{opacity:.3;pointer-events:none}
+
+/* ───── Asistencia obligatoria ───── */
+.sheet.locked .close{display:none}
+.must{margin-top:20px;text-align:left;padding:18px 16px;border-radius:20px;background:#fff;border:2px solid var(--brown-d);box-shadow:0 0 0 5px rgba(94,74,62,.1);scroll-margin-top:10px}
+.must-head{text-align:center;margin-bottom:6px}
+.must-head span{display:inline-block;font-size:11px;font-weight:700;letter-spacing:.2em;text-transform:uppercase;background:var(--brown-d);color:var(--cream);padding:4px 11px;border-radius:999px}
+.must-head b{display:block;font-family:'Gloock',serif;font-weight:400;font-size:24px;color:var(--brown-d);margin-top:8px}
+.must-head small{display:block;font-size:13px;color:var(--brown-s);margin-top:2px}
+.must .seg span{font-size:13px;padding:11px 6px}
+.must-done{text-align:center}
+.must-done .big{font-size:42px}
+.must-done b{display:block;font-family:'Gloock',serif;font-weight:400;font-size:24px;color:var(--brown-d)}
+.must-done small{display:block;color:var(--brown-s);font-size:13.5px;margin-top:4px}
 </style>
 </head>
 <body>
@@ -503,7 +516,7 @@ const Mis = {
   quitar(id, cupo){ const o = this.get(); o.items = (o.items||[]).filter(x => !(x.id === id && Number(x.cupo) === Number(cupo))); this.set(o); },
   reemplazar(clave, items){ this.set({ clave, items: items.map(r => ({ id:r.id, cupo:Number(r.cupo) })) }); }
 };
-let guardando = false;
+let guardando = false, obligatorio = false;
 const nuevoReqId = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 10);
 
 /* ═════════ API ═════════ */
@@ -646,7 +659,7 @@ function abrirModal(){
   $('#modal').classList.add('open');
   setTimeout(() => { const n = $('#m-name'); if (n && !n.value) n.focus(); }, 300);
 }
-function cerrarModal(){ if (guardando) return; $('#modal').classList.remove('open'); }
+function cerrarModal(){ if (guardando || obligatorio) return; $('#modal').classList.remove('open'); }
 
 async function confirmar(){
   const nombre = $('#m-name').value.trim(), mensaje = $('#m-msg').value.trim();
@@ -674,8 +687,9 @@ async function confirmar(){
         ${ko.length ? `<p class="sub" style="margin-top:10px">Estos ya no tenían cupo disponible:</p>
           <ul class="sel-list">${ko.map(r=>`<li>✕ ${esc(r.regalo || r.id)}</li>`).join('')}</ul>
           <p class="sub">Puedes elegir otro de la lista 💛</p>` : ''}
-        <button class="main-btn" onclick="cerrarModal()">${ok.length ? 'Ver la lista' : 'Elegir otro regalo'}</button>
+        ${ok.length && !store.get('bs_rsvp') ? formAsistenciaHTML(nombre) : `<button class="main-btn" onclick="cerrarModal()">${ok.length ? 'Ver la lista' : 'Elegir otro regalo'}</button>`}
       </div>`;
+    if (ok.length && !store.get('bs_rsvp')) activarAsistenciaObligatoria();
     if (ok.length) celebrar();
   }catch(e){
     btn.disabled = false; btn.innerHTML = 'Confirmar mi regalo 🤍';
@@ -777,6 +791,83 @@ function pintarMisRegalos(d){
 }
 function mostrarErr(t){ const e = $('#m-err'); if (e){ e.textContent = t; e.hidden = false; } }
 
+
+/* ═════════ Asistencia obligatoria después de reservar ═════════ */
+function formAsistenciaHTML(nombre){
+  return `
+    <div class="must" id="must">
+      <div class="must-head"><span>Paso 2 de 2</span><b>Confirma tu asistencia</b><small>Es obligatorio para terminar tu reserva 🤍</small></div>
+      <label class="f" for="a-name">Tu nombre</label>
+      <input class="inp" id="a-name" maxlength="60" value="${esc(nombre || store.get('bs_nombre'))}">
+      <label class="f">¿Asistirás al baby shower?</label>
+      <div class="seg" id="a-seg">
+        <label><input type="radio" name="a-asiste" value="Sí"><span>¡Sí, allá estaré! 🤍</span></label>
+        <label><input type="radio" name="a-asiste" value="No"><span>No podré ir</span></label>
+      </div>
+      <div id="a-people-wrap" hidden>
+        <label class="f" for="a-people">¿Cuántas personas (contándote)?</label>
+        <select class="inp" id="a-people"><option>1</option><option selected>2</option><option>3</option><option>4</option><option>5</option><option>6</option></select>
+      </div>
+      <button class="main-btn" id="a-go">Confirmar asistencia</button>
+      <p class="msg-err" id="a-err" hidden></p>
+    </div>`;
+}
+
+function activarAsistenciaObligatoria(){
+  obligatorio = true;
+  $('#sheet').classList.add('locked');
+  const seg = $('#a-seg');
+  seg.addEventListener('change', () => {
+    const v = (seg.querySelector('input:checked') || {}).value;
+    $('#a-people-wrap').hidden = v !== 'Sí';
+  });
+  $('#a-go').onclick = async () => {
+    const btn = $('#a-go'), err = $('#a-err');
+    const nombre = $('#a-name').value.trim();
+    const sel = seg.querySelector('input:checked');
+    if (nombre.length < 2){ err.textContent = 'Escribe tu nombre, por favor ☁️'; err.hidden = false; return; }
+    if (!sel){ err.textContent = 'Cuéntanos si asistirás 🤍'; err.hidden = false; return; }
+    err.hidden = true; btn.disabled = true; btn.innerHTML = '<span class="spin"></span> Enviando…';
+    try{
+      await apiPost({ action:'rsvp', nombre, asiste: sel.value, personas: sel.value === 'Sí' ? $('#a-people').value : 0, mensaje:'', clave: Mis.clave() });
+      store.set('bs_rsvp', sel.value); store.set('bs_nombre', nombre);
+      obligatorio = false; $('#sheet').classList.remove('locked');
+      const si = sel.value === 'Sí';
+      $('#must').innerHTML = `<div class="must-done"><div class="big">${si ? '🤍' : '☁️'}</div>
+        <b>${si ? '¡Te esperamos!' : '¡Gracias por avisarnos!'}</b>
+        <small>${si ? 'Domingo 8 de noviembre · 3:00 PM' : 'Gracias por tu regalo para Joaquín.'}</small></div>
+        <button class="main-btn" onclick="cerrarModal()">Listo, ver la lista</button>`;
+      marcarRsvpHecho(nombre, si);
+      if (si) celebrar();
+    }catch(e){
+      btn.disabled = false; btn.textContent = 'Confirmar asistencia';
+      err.textContent = 'No se pudo enviar: ' + e.message + '. Intenta de nuevo.'; err.hidden = false;
+    }
+  };
+  setTimeout(() => { const m = $('#must'); if (m) m.scrollIntoView({ behavior:'smooth', block:'start' }); }, 900);
+}
+
+// Si alguien reservó pero cerró la página sin confirmar asistencia, se le pide al volver
+function pedirAsistenciaPendiente(){
+  if (store.get('bs_rsvp') || !(Mis.get().items || []).length) return;
+  $('#sheet').innerHTML = `<div class="thanks">
+      <div class="big">☁️</div>
+      <h3>¡Ya casi terminas!</h3>
+      <p class="sub">Reservaste tu regalo para Joaquín, solo falta confirmar si nos acompañas.</p>
+      ${formAsistenciaHTML(store.get('bs_nombre'))}
+    </div>`;
+  $('#modal').classList.add('open');
+  activarAsistenciaObligatoria();
+}
+
+function marcarRsvpHecho(nombre, si){
+  const f = $('#rsvpForm'); if (!f) return;
+  f.innerHTML = `<div class="thanks"><div class="big">${si?'🤍':'☁️'}</div>
+    <h3 class="serif" style="font-size:28px;color:var(--brown-d)">${si?'¡Te esperamos!':'¡Gracias por avisarnos!'}</h3>
+    <p class="sub" style="margin-top:8px">${esc(nombre)}, tu asistencia ya quedó confirmada.</p>
+    <a class="btn-soft" href="#regalos">Ver lista de regalos</a></div>`;
+}
+
 /* ═════════ Asistencia ═════════ */
 const rf = $('#rsvpForm');
 $('#r-name').value = store.get('bs_nombre');
@@ -788,8 +879,8 @@ rf.addEventListener('submit', async e => {
   if (nombre.length < 2){ err.textContent = 'Escribe tu nombre, por favor ☁️'; err.hidden = false; return; }
   err.hidden = true; btn.disabled = true; btn.innerHTML = '<span class="spin"></span> Enviando…';
   try{
-    await apiPost({ action:'rsvp', nombre, asiste: rf.asiste.value, personas: $('#r-people').value, mensaje: $('#r-msg').value.trim() });
-    store.set('bs_nombre', nombre);
+    await apiPost({ action:'rsvp', nombre, asiste: rf.asiste.value, personas: $('#r-people').value, mensaje: $('#r-msg').value.trim(), clave: Mis.clave() });
+    store.set('bs_nombre', nombre); store.set('bs_rsvp', rf.asiste.value);
     const si = rf.asiste.value === 'Sí';
     rf.innerHTML = `<div class="thanks"><div class="big">${si?'🤍':'☁️'}</div>
       <h3 class="serif" style="font-size:28px;color:var(--brown-d)">${si?'¡Te esperamos!':'¡Gracias por avisarnos!'}</h3>
@@ -950,6 +1041,8 @@ const Musica = (() => {
 })();
 
 cargar();
+if (store.get('bs_rsvp')) marcarRsvpHecho(store.get('bs_nombre'), store.get('bs_rsvp') === 'Sí');
+setTimeout(pedirAsistenciaPendiente, 1500);
 </script>
 </body>
 </html>
